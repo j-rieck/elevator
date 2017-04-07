@@ -1,221 +1,222 @@
 var elevator = (function () {
-	"use strict";
+    "use strict";
 
-	const state = {
-		"IDLE": 0,
-		"MOVING": 1,
-		"STOPPED": 2
-	};
+    const state = {
+        IDLE: 0,
+        MOVING: 1,
+        STOPPED: 2
+    };
 
-	const direction = {
-		"UP": 0,
-		"DOWN": 1
-	};
+    const direction = {
+        UP: 0,
+        DOWN: 1
+    };
 
-	const floors = {
-		"MIN": 1,
-		"MAX": 7
-	};
+    var floors = {
+        MIN: 1,
+        MAX: 7,
+        floor: []
+    };
 
-	let currentState = state.IDLE;
-	let currentDirection;
-	let currentFloor = floors.MIN;
-	let destinations = [];
-	let callers = {
-		[direction.UP]: [],
-		[direction.DOWN]: []
-	};
-	let idleTimer;
+    var currentState = state.IDLE;
+    var currentDirection;
+    var currentFloor = floors.MIN;
+    var destinations = [];
+    var callers = {
+        [direction.UP]: [],
+        [direction.DOWN]: []
+    };
+    let controlPanel = {};
+    let idleTimer;
 
-	let otherDirection = function (dir) {
-		return dir === direction.UP? direction.DOWN: direction.UP;
-	}
+    let otherDirection = function (dir) {
+        return dir === direction.UP? direction.DOWN: direction.UP;
+    };
 
-	let shouldStop = function () {
-		if (currentDirection === direction.UP) {
-			return destinations.indexOf(currentFloor) >= 0
-				|| callers[direction.UP].indexOf(currentFloor) >= 0
-				|| currentFloor >= floors.MAX;
-		} else {
-			return destinations.indexOf(currentFloor) >= 0
-				|| callers[direction.DOWN].indexOf(currentFloor) >= 0
-				|| currentFloor <= floors.MIN;
-		}
-	}
+    let shouldStop = function () {
+        if (currentDirection === direction.UP) {
+            return destinations.indexOf(currentFloor) >= 0 ||
+                callers[direction.UP].indexOf(currentFloor) >= 0 ||
+                currentFloor >= floors.MAX;
+        } else {
+            return destinations.indexOf(currentFloor) >= 0 ||
+                callers[direction.DOWN].indexOf(currentFloor) >= 0 ||
+                currentFloor <= floors.MIN;
+        }
+    };
 
-	let shouldStart = function () {
-		if (destinations.length === 0) {
-			return false;
-		}
+    let shouldStart = function () {
+        if (destinations.length === 0) {
+            return false;
+        }
 
-		if (currentDirection === direction.UP) {
-			return currentFloor < Math.max.apply(Math, destinations) && currentFloor <= floors.MAX;
-		} else if(currentDirection === direction.DOWN) {
-			return currentFloor > Math.min.apply(Math, destinations) && currentFloor >= floors.MIN;
-		} else {
-			return 
-		}
-	};
+        if (currentDirection === direction.UP) {
+            return currentFloor < Math.max.apply(Math, destinations) && currentFloor <= floors.MAX;
+        } else if(currentDirection === direction.DOWN) {
+            return currentFloor > Math.min.apply(Math, destinations) && currentFloor >= floors.MIN;
+        } else {
+            return;
+        }
+    };
 
-	let callersAbove = function (floor) {
-		let allCallers = callers[direction.UP].concat(callers[direction.DOWN]);
-		return allCallers.filter(function (f) {
-			return f > currentFloor;
-		}).sort(function (x, y) {
-			return x - y;
-		});
-	}
+    let callersAbove = function () {
+        let allCallers = callers[direction.UP].concat(callers[direction.DOWN]);
+        return allCallers.filter(function (f) {
+            return f > currentFloor;
+        }).sort(function (x, y) {
+            return x - y;
+        });
+    };
 
-	let callersBelow = function (floor) {
-		let allCallers = callers[direction.UP].concat(callers[direction.DOWN]);
-		return allCallers.filter(function (f) {
-			return f < currentFloor;
-		}).sort(function (x, y) {
-			return x - y;
-		});
-	}
+    let callersBelow = function () {
+        let allCallers = callers[direction.UP].concat(callers[direction.DOWN]);
+        return allCallers.filter(function (f) {
+            return f < currentFloor;
+        }).sort(function (x, y) {
+            return x - y;
+        });
+    };
 
-	let start = async function () {
-		console.log("start");
-		currentState = state.MOVING;
-		do {
-			await move();
-			console.log("Current floor ", currentFloor);
-			if(shouldStop()) {
-				stop();
-				return;
-			}
-		} while(true);
-		
-	};
+    let start = async function () {
+        console.log("start");
+        currentState = state.MOVING;
+        do {
+            await move();
+            console.log("Current floor ", currentFloor);
+            if(shouldStop()) {
+                stop();
+                return;
+            }
+        } while(true);
+    };
 
-	let stop = function () {
-		console.log("stop")
-		currentState = state.STOPPED;
-		openDoors();
+    let stop = function () {
+        console.log("stop")
+        currentState = state.STOPPED;
+        openDoors();
 
-		callers;
+        callers;
 
-		// Remove floor from destinations and callers in same direction
-		if(destinations.indexOf(currentFloor) >= 0) {
-			destinations.splice(destinations.indexOf(currentFloor), 1);
-		}
-		
-		if(currentDirection !== null && callers[currentDirection].indexOf(currentFloor) >= 0) {
-			callers[currentDirection].splice(callers[currentDirection].indexOf(currentFloor), 1);
-		}
+        // Remove floor from destinations and callers in same direction
+        if(destinations.indexOf(currentFloor) >= 0) {
+            destinations.splice(destinations.indexOf(currentFloor), 1);
+        }
 
-		run();
-	};
+        if(currentDirection !== null && callers[currentDirection].indexOf(currentFloor) >= 0) {
+            callers[currentDirection].splice(callers[currentDirection].indexOf(currentFloor), 1);
+        }
 
-	let idle = function () {
-		console.log("IDLE");
-		currentState = state.IDLE;
-		currentDirection = null;
+        run();
+    };
 
-		clearTimeout(idleTimer);
+    let idle = function () {
+        console.log("IDLE");
+        currentState = state.IDLE;
+        currentDirection = null;
 
-		// If no activity for 2 minutes, goto 4th floor
-		idleTimer = setTimeout(function () {
-			if(currentState === state.IDLE && currentFloor != 4) {
-				self.input(4);
-			}
-		}, 1000*4); //60*2);
-	};
+        clearTimeout(idleTimer);
 
-	let move = function () {
-		//console.log("moving");
+        // If no activity for 2 minutes, goto 4th floor
+        idleTimer = setTimeout(function () {
+            if(currentState === state.IDLE && currentFloor !== 4) {
+                self.input(4);
+            }
+        }, 1000*60*2);
+    };
 
-		if(currentDirection === direction.UP) {
-			currentFloor++;
-		} else {
-			currentFloor--;
-		}
+    let move = function () {
+        //console.log("moving");
 
-		return new Promise(resolve => setTimeout(resolve, 1000));
-	};
+        if(currentDirection === direction.UP) {
+            currentFloor++;
+        } else {
+            currentFloor--;
+        }
 
-	let openDoors = function () {
-		console.log("Opening doors");
-	};
+        return new Promise(resolve => setTimeout(resolve, 1000));
+    };
 
-	let run = function () {
-		if (currentState === state.MOVING) {
-			return;
-		}
+    let openDoors = function () {
+        console.log("Opening doors");
+    };
 
-		if (destinations.length === 0) {
-			let above = callersAbove();
-			let below = callersBelow();
+    let run = function () {
+        if (currentState === state.MOVING) {
+            return;
+        }
 
-			if(currentDirection === direction.UP) {
-				if (above.length > 0) {
-					self.input(Math.min.apply(Math, above));
-				} else if (below.length > 0) {
-					currentDirection = direction.DOWN;
-					self.input(Math.max.apply(Math, below));
-				}
-			} else {
-				if (below.length > 0) {
-					self.input(Math.max.apply(Math, below));
-				} else if (above.length > 0) {
-					currentDirection = direction.UP;
-					self.input(Math.min.apply(Math, below));
-				}
-			}
+        if (destinations.length === 0) {
+            let above = callersAbove();
+            let below = callersBelow();
 
-			idle();
-			return;
-		}
+            if(currentDirection === direction.UP) {
+                if (above.length > 0) {
+                    self.input(Math.min.apply(Math, above));
+                } else if (below.length > 0) {
+                    currentDirection = direction.DOWN;
+                    self.input(Math.max.apply(Math, below));
+                }
+            } else {
+                if (below.length > 0) {
+                    self.input(Math.max.apply(Math, below));
+                } else if (above.length > 0) {
+                    currentDirection = direction.UP;
+                    self.input(Math.min.apply(Math, below));
+                }
+            }
 
-		if(currentState === state.IDLE) {
-			if(currentFloor < destinations[0]) {
-				currentDirection = direction.UP;
-			} else {
-				currentDirection = direction.DOWN;
-			}
-		}
+            idle();
+            return;
+        }
 
-		if(shouldStart()) {
-			start();
-		} else {
-			idle();
-		}
-	};
+        if(currentState === state.IDLE) {
+            if(currentFloor < destinations[0]) {
+                currentDirection = direction.UP;
+            } else {
+                currentDirection = direction.DOWN;
+            }
+        }
 
-	// Public functions
+        if(shouldStart()) {
+            start();
+        } else {
+            idle();
+        }
+    };
 
-	let self = {};
+    // Public functions
 
-	// Takes input from button panel inside elevator
-	self.input = function (dest) {
-		// If the destination is the current floor, open the door
-		if (dest === currentFloor) {
-			openDoors();
-			return;
-		} else if (dest > floors.MAX || dest < floors.MIN) {
-			return;
-		}
+    let self = {};
 
-		destinations.push(dest);
-		destinations.sort((x, y) => x - y);
-		destinations = destinations.filter((value, index, self) => self.indexOf(value) === index);
+    // Takes input from button panel inside elevator
+    self.input = function (dest) {
+        // If the destination is the current floor, open the door
+        if (dest === currentFloor) {
+            openDoors();
+            return;
+        } else if (dest > floors.MAX || dest < floors.MIN) {
+            return;
+        }
 
-		run();
-	};
+        destinations.push(dest);
+        destinations.sort((x, y) => x - y);
+        destinations = destinations.filter((value, index, self) => self.indexOf(value) === index);
 
-	// Call from button on each floor
-	self.call = function (floor, dir) {
-		if (destinations.length === 0) {
-			self.input(floor);
-		}
+        run();
+    };
 
-		callers[dir].push(floor);
-		callers[dir].sort((x, y) => x - y);
-		callers[dir] = callers[dir].filter((value, index, self) => self.indexOf(value) === index);
+    // Call from button on each floor
+    self.call = function (floor, dir) {
+        if (destinations.length === 0) {
+            self.input(floor);
+        }
 
-		run();
-	}
+        callers[dir].push(floor);
+        callers[dir].sort((x, y) => x - y);
+        callers[dir] = callers[dir].filter((value, index, self) => self.indexOf(value) === index);
 
-	return self;
+        run();
+    };
+
+    return self;
 })();
