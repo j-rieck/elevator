@@ -1,4 +1,4 @@
-var elevator = (function () {
+module.exports.generateElevator = function () {
     "use strict";
 
     const state = {
@@ -14,8 +14,7 @@ var elevator = (function () {
 
     var floors = {
         MIN: 1,
-        MAX: 7,
-        floor: []
+        MAX: 7
     };
 
     var currentState = state.IDLE;
@@ -77,23 +76,32 @@ var elevator = (function () {
         });
     };
 
-    let start = async function () {
-        console.log("start");
+    let start = function () {
         currentState = state.MOVING;
-        do {
-            await move();
-            console.log("Current floor ", currentFloor);
-            if(shouldStop()) {
-                stop();
-                return;
-            }
-        } while(true);
+
+        if(currentDirection === direction.UP) {
+            currentFloor++;
+        } else {
+            currentFloor--;
+        }
+
+        setTimeout(move, 1000);
+        document.getElementById("current-floor").innerHTML = currentFloor;
+    };
+
+    let move = function() {        
+        if(shouldStop()) {
+            stop();
+            return;
+        } else {
+            start();
+        }
     };
 
     let stop = function () {
         console.log("stop")
         currentState = state.STOPPED;
-        openDoors();
+        document.getElementById("control-btn-" + currentFloor).classList.remove("lit");
 
         callers;
 
@@ -102,15 +110,29 @@ var elevator = (function () {
             destinations.splice(destinations.indexOf(currentFloor), 1);
         }
 
-        if(currentDirection !== null && callers[currentDirection].indexOf(currentFloor) >= 0) {
-            callers[currentDirection].splice(callers[currentDirection].indexOf(currentFloor), 1);
+        if(currentDirection !== null) {
+            if(callers[currentDirection].indexOf(currentFloor) >= 0) {
+                callers[currentDirection].splice(callers[currentDirection].indexOf(currentFloor), 1);
+
+                // I'm sorry about this
+                try {
+                    document.getElementById("elevator-btn-" + currentFloor + "-" + currentDirection).classList.remove("lit");
+                } catch (e) {} // button didn't exist, move on
+            } else if( (currentDirection === direction.UP && callersAbove().length === 0) ||
+                        (currentDirection === direction.DOWN && callersBelow().length === 0))  {
+                callers[otherDirection()].splice(callers[otherDirection()].indexOf(currentFloor), 1);
+
+                // I really am
+                try {
+                    document.getElementById("elevator-btn-" + currentFloor + "-" + currentDirection).classList.remove("lit");
+                } catch (e) {} // button didn't exist, move on
+            }
         }
 
-        run();
+        openDoors();
     };
 
     let idle = function () {
-        console.log("IDLE");
         currentState = state.IDLE;
         currentDirection = null;
 
@@ -124,20 +146,14 @@ var elevator = (function () {
         }, 1000*60*2);
     };
 
-    let move = function () {
-        //console.log("moving");
-
-        if(currentDirection === direction.UP) {
-            currentFloor++;
-        } else {
-            currentFloor--;
-        }
-
-        return new Promise(resolve => setTimeout(resolve, 1000));
-    };
-
     let openDoors = function () {
         console.log("Opening doors");
+        setTimeout(closeDoors, 1500);
+    };
+
+    let closeDoors = function () {
+        console.log("Closing doors");
+        setTimeout(run, 1500);
     };
 
     let run = function () {
@@ -146,6 +162,14 @@ var elevator = (function () {
         }
 
         if (destinations.length === 0) {
+            // Reset button lights
+            try {
+                document.getElementById("elevator-btn-" + currentFloor + "-" + currentDirection).classList.remove("lit");
+            } catch (e) {} // button didn't exist, move on
+            try {
+                document.getElementById("elevator-btn-" + currentFloor + "-" + otherDirection()).classList.remove("lit");
+            } catch (e) {} // button didn't exist, move on
+
             let above = callersAbove();
             let below = callersBelow();
 
@@ -202,11 +226,22 @@ var elevator = (function () {
         destinations.sort((x, y) => x - y);
         destinations = destinations.filter((value, index, self) => self.indexOf(value) === index);
 
+        document.getElementById("control-btn-" + dest).classList.add("lit");
+
         run();
     };
 
     // Call from button on each floor
     self.call = function (floor, dir) {
+        if(callers[dir].indexOf(floor) >= 0) {
+            return;
+        }
+        
+        // This is bad, no DOM code in here
+        if(floor !== currentFloor) {
+            document.getElementById("elevator-btn-" + floor + "-" + dir).classList.add("lit");
+        }
+
         if (destinations.length === 0) {
             self.input(floor);
         }
@@ -219,4 +254,4 @@ var elevator = (function () {
     };
 
     return self;
-})();
+};

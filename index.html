@@ -2,9 +2,86 @@
 <html>
 <head>
 	<title>Elevator</title>
-	<script type="text/javascript" src="dist/main.js"></script>
+	<script type="text/javascript" src="node_modules/blueimp-tmpl/js/tmpl.min.js"></script>
+	<script type="text/javascript" src="dist/elevated.js"></script>
+	<style type="text/css">
+		body {
+			font-family: sans-serif;
+			font-size: 20px;
+		}
+		#control-buttons {
+			padding: 20px;
+		}
+		#current-floor {
+			width: 40px;
+			height: 40px;
+			background: #111;
+			color: red;
+			font-size: 40px;
+			text-align: center;
+			position: relative;
+			margin: 10px auto;
+			padding: 10px;
+		}
+		.floor {
+			padding: 10px;
+			border-bottom: 2px solid #222;
+		}
+		.box {
+			float: left;
+			border: 3px solid #222;
+			width: 200px;
+			margin: auto;
+			position: relative;
+			height: 100%;
+			width: 200px;
+			margin: 40px;
+		}
+		button {
+			width: 30px;
+			height: 30px;
+			background: #fffeee;
+			border: 1px, solid, #555;
+			border-radius: 3px;
+		}
+		.lit {
+			background: yellow;
+		}
+	</style>
 </head>
 <body>
-asdf
+<div id="building" class="box">
+	<script type="text/x-tmpl" id="floors">
+		{% for (let i = 7; i >= 1; i--) { %}
+	    	<div class="floor" id="floor-{%= i %}">
+	    		<div>Floor {%= i %}</div>
+	    		{% if (i < 7) { %}
+	    		<button onclick="building.pushButton({%= i %},'up');" class="btn" id="elevator-btn-{%= i %}-0">&#8679;</button>
+	    		{% } %}
+	    		{% if (i > 1) { %}
+				<button onclick="building.pushButton({%= i %},'down');" class="btn" id="elevator-btn-{%= i %}-1">&#8681;</button>
+				{% } %}
+	    	</div>
+		{% } %}
+	</script>
+</div>
+
+<div id="control" class="box">
+	<div id="current-floor">1</div>
+	<div id="control-buttons">
+		<script type="text/x-tmpl" id="button-generator">
+		{% for (let i = 7; i >= 1; i--) { %}
+			<button onclick="building.controlButton({%= i %});" class="btn" id="control-btn-{%= i %}">{%= i %}</button><br>
+		{% } %}
+		</script>
+	</div>
+</div>
+
+<script type="text/javascript">
+	(function () {
+		document.getElementById("building").innerHTML = (tmpl("floors", null))();
+		document.getElementById("control-buttons").innerHTML = (tmpl("button-generator", null))();
+	})();
+</script>
 </body>
 </html>

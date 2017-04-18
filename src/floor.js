@@ -1,4 +1,4 @@
-var generateFloor = function (s) {
+module.exports.generateFloor = function (s) {
 	"use strict";
 
 	let directions = {
@@ -6,12 +6,20 @@ var generateFloor = function (s) {
 		DOWN: 1
 	};
 
-	let lighter = function () {
+	let lighter = function (direction) {
 		let light = {};
 		light.currentLightState = self.lightState.OFF;
 		light.changeLightState = function (state) {
 			light.currentLightState = state;
-	};
+		};
+
+		light.on = function () {
+			document.getElementById("elevator-btn-" + self.storey + "-" + direction).classList.add("lit");
+		}
+
+		light.off = function () {
+			document.getElementById("elevator-btn-" + self.storey + "-" + direction).classList.remove("lit");
+		}
 
 		return light;
 	};
@@ -25,10 +33,12 @@ var generateFloor = function (s) {
 	self.storey = s;
 	self.buttons = {
 		[directions.UP]: {
-			"light": lighter()
+			light: lighter(directions.UP),
 		},
 		[directions.DOWN]: {
-			"light": lighter()
+			light: lighter(directions.DOWN)
 		}
 	};
+
+	return self;
 };
